@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "coolify-mcp"
+version = "0.1.0"
+description = "Coolify MCP Server - Manage Coolify via Model Context Protocol"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+coolify-mcp = "server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
