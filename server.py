@@ -26,6 +26,18 @@ COOLIFY_TOKEN = config.get("COOLIFY_TOKEN") or os.environ.get("COOLIFY_TOKEN", "
 
 mcp = FastMCP("coolify")
 
+# Available domains for Coolify deployments
+AVAILABLE_DOMAINS = [
+    "jefripunza.com",
+    "sawang.cloud",
+    "sawang.tech",
+    "kelaspro.com",
+    "saasdu.id",
+    "saasdu.web.id",
+    "simahir.ai",
+    "veyra.id",
+]
+
 
 def coolify_api(method, path, data=None):
     """Make API request to Coolify using curl (bypasses Cloudflare)."""
@@ -160,6 +172,75 @@ def get_application(uuid: str):
     return json.dumps(result, indent=2)
 
 
+@mcp.tool()
+def create_docker_application(
+    name: str,
+    docker_image: str,
+    domain: str,
+    project_uuid: str = "tsyqdrgwrlk0tr8wd2qne59o",
+    server_uuid: str = "tbc2l8joph0zwvg1t2n4h2s6",
+    environment: str = "production",
+    port: str = "80",
+    tag: str = "latest",
+    description: str = ""
+):
+    """
+    Create and deploy a Docker Hub image to Coolify.
+    
+    IMPORTANT: Domain MUST be from available domains:
+    - jefripunza.com
+    - sawang.cloud
+    - sawang.tech
+    - kelaspro.com
+    - saasdu.id
+    - saasdu.web.id
+    - simahir.ai
+    - veyra.id
+    
+    Format: https://{name}.{domain}
+    Example: https://myapp.jefripunza.com
+    """
+    # Validate domain
+    domain_parts = domain.split(".")
+    base_domain = ".".join(domain_parts[-2:])
+    if base_domain not in AVAILABLE_DOMAINS:
+        return json.dumps({
+            "error": f"Invalid domain: {base_domain}",
+            "available_domains": AVAILABLE_DOMAINS
+        }, indent=2)
+    
+    # Build full URL
+    if not domain.startswith("https://"):
+        domain = f"https://{domain}"
+    
+    payload = {
+        "project_uuid": project_uuid,
+        "server_uuid": server_uuid,
+        "environment_name": environment,
+        "docker_registry_image_name": docker_image,
+        "docker_registry_image_tag": tag,
+        "name": name,
+        "description": description,
+        "domains": domain,
+        "ports_exposes": port,
+        "health_check_enabled": False,
+        "instant_deploy": True
+    }
+    
+    result = coolify_api("POST", "/applications/dockerimage", payload)
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+def list_available_domains():
+    """List available domains for Coolify deployments."""
+    return json.dumps({
+        "domains": AVAILABLE_DOMAINS,
+        "usage": "Format: https://{name}.{domain}",
+        "example": "https://myapp.jefripunza.com"
+    }, indent=2)
+
+
 # ==================== DATABASES ====================
 
 @mcp.tool()
@@ -290,7 +371,7 @@ def coolify_version():
 
 if __name__ == "__main__":
     if not COOLIFY_TOKEN:
-        print("ERROR: COOLIFY_TOKEN not set in ~/.cloudflared/coolify.env or environment")
+        print("ERROR: COOLIFY_TOKEN environment variable not set")
         exit(1)
     print(f"Coolify MCP Server starting...")
     print(f"URL: {COOLIFY_URL}")
